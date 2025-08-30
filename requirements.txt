@@ -1,0 +1,8 @@
+# Dependencias Python para el cliente Polkadot
+substrate-interface==1.7.9
+scalecodec==1.2.11
+py-sr25519-bindings==0.2.0
+py-ed25519-bindings==1.0.0
+xxhash==3.4.1
+websocket-client==1.6.4
+requests==2.31.0

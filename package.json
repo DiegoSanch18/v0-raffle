@@ -1,15 +1,27 @@
 {
-  "name": "my-v0-project",
+  "name": "polkadot-raffle-dapp",
   "version": "0.1.0",
   "private": true,
   "scripts": {
     "build": "next build",
+    "contract:build": "cd contracts && cargo contract build",
+    "contract:deploy": "python scripts/deploy_contract.py",
+    "contract:test": "cd contracts && cargo test",
     "dev": "next dev",
     "lint": "next lint",
-    "start": "next start"
+    "setup:polkadot": "python scripts/setup_polkadot.py",
+    "start": "next start",
+    "test:python": "python -m pytest tests/ -v"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
+    "@polkadot/api": "latest",
+    "@polkadot/extension-dapp": "latest",
+    "@polkadot/extension-inject": "latest",
+    "@polkadot/keyring": "^12.6.2",
+    "@polkadot/types": "^10.11.2",
+    "@polkadot/util": "^12.6.2",
+    "@polkadot/util-crypto": "^12.6.2",
     "@radix-ui/react-accordion": "1.2.2",
     "@radix-ui/react-alert-dialog": "1.1.4",
     "@radix-ui/react-aspect-ratio": "1.1.1",
