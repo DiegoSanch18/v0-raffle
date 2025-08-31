@@ -19,7 +19,7 @@ import {
   Hash,
   ArrowRight,
 } from "lucide-react"
-import { Connection } from "@solana/web3.js"
+import { useRouter } from "next/router"
 
 const createConfetti = () => {
   const colors = ["#ff6b6b", "#4ecdc4", "#45b7d1", "#96ceb4", "#feca57", "#ff9ff3", "#54a0ff"]
@@ -79,7 +79,7 @@ interface PhantomProvider {
 interface Raffle {
   id: string
   title: string
-  ticketPrice: number // in SOL
+  ticketPrice: number // in DOT
   ticketsIssued: number
   maxTickets: number
   organizer: string
@@ -101,47 +101,47 @@ interface NFTTicket {
   qrCode: string
 }
 
-// Mock raffle data - will be replaced with Solana contract data
+// Mock raffle data - will be replaced with Polkadot contract data
 const mockRaffles: Raffle[] = [
   {
     id: "1",
-    title: "Rifa AVEIT 2025",
-    ticketPrice: 0.1,
+    title: "RIFA AVEIT 2025",
+    ticketPrice: 2.5, // Updated to DOT pricing
     ticketsIssued: 45,
     maxTickets: 100,
-    organizer: "8sj...39F",
-    isActive: true, // Ensuring raffle is active
+    organizer: "PepitoGrillo87", // Updated to creative username
+    isActive: true,
     stakePercent: 10,
     feePercent: 5,
-    totalRaised: 4.5,
+    totalRaised: 112.5, // Updated to reflect DOT pricing
     participants: [],
     winner: null,
   },
   {
     id: "2",
-    title: "Rifa Tech UTN",
-    ticketPrice: 0.05,
+    title: "Tech Raffle UTN",
+    ticketPrice: 1.25, // Updated to DOT pricing
     ticketsIssued: 23,
     maxTickets: 50,
-    organizer: "9kL...28A",
-    isActive: true, // Ensuring raffle is active
+    organizer: "MCOS02", // Updated to creative username
+    isActive: true,
     stakePercent: 15,
     feePercent: 5,
-    totalRaised: 1.15,
+    totalRaised: 28.75, // Updated to reflect DOT pricing
     participants: [],
     winner: null,
   },
   {
     id: "3",
-    title: "Rifa Blockchain FRC",
-    ticketPrice: 0.2,
+    title: "Blockchain FRC Raffle",
+    ticketPrice: 5.0, // Updated to DOT pricing
     ticketsIssued: 12,
     maxTickets: 30,
-    organizer: "7mN...45B",
-    isActive: true, // Ensuring raffle is active
+    organizer: "CryptoNinja99", // Updated to creative username
+    isActive: true,
     stakePercent: 12,
     feePercent: 5,
-    totalRaised: 2.4,
+    totalRaised: 60.0, // Updated to reflect DOT pricing
     participants: [],
     winner: null,
   },
@@ -153,7 +153,7 @@ declare global {
   }
 }
 
-const connection = new Connection("https://api.mainnet-beta.solana.com") // Replace with your Solana RPC endpoint
+// const connection = new Connection("https://api.mainnet-beta.polkadot.com") // Replace with your Polkadot RPC endpoint
 
 const generateRaffleData = () => {
   return Array.from({ length: 24 }, (_, i) => ({
@@ -250,6 +250,7 @@ export default function SolanaWalletApp() {
   const [raffleData, setRaffleData] = useState(generateRaffleData())
   const [currentTime, setCurrentTime] = useState(new Date())
   const [showLandingPage, setShowLandingPage] = useState(true)
+  const router = useRouter()
 
   useEffect(() => {
     const style = document.createElement("style")
@@ -588,7 +589,7 @@ export default function SolanaWalletApp() {
   ]
 
   const goToRafflesDashboard = () => {
-    window.location.href = "/rifas"
+    router.push("/rifas")
   }
 
   return (
@@ -640,8 +641,12 @@ export default function SolanaWalletApp() {
                   </button>
                 </nav>
                 <div className="flex items-center space-x-4">
-                  <Button variant="outline" onClick={goToRafflesDashboard} className="bg-transparent">
-                    View Dashboard
+                  <Button
+                    variant="default"
+                    onClick={goToRafflesDashboard}
+                    className="bg-gradient-to-r from-secondary to-blue-500 hover:from-secondary/90 hover:to-blue-500/90 text-white font-semibold"
+                  >
+                    📊 Analytics Dashboard
                   </Button>
                   {!isConnected ? (
                     <Button
@@ -692,7 +697,7 @@ export default function SolanaWalletApp() {
                   Transparent Blockchain Raffle
                 </h1>
                 <p className="text-xl md:text-2xl text-muted-foreground mb-12 text-pretty max-w-3xl mx-auto leading-relaxed animate-slide-up">
-                  An AVEIT project that replaces Lottery certification with a decentralized system on Solana.
+                  An AVEIT project that replaces Lottery certification with a decentralized system on Polkadot.
                 </p>
 
                 <Button
@@ -701,7 +706,7 @@ export default function SolanaWalletApp() {
                   className="bg-gradient-to-r from-primary to-blue-600 hover:from-primary/90 hover:to-blue-600/90 text-white px-8 py-6 text-lg font-semibold rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 animate-slide-up"
                 >
                   <Sparkles className="w-5 h-5 mr-2" />
-                  View Raffle Dashboard
+                  Try Demo - View Dashboard
                 </Button>
               </div>
             </section>
@@ -763,7 +768,7 @@ export default function SolanaWalletApp() {
                   </CardHeader>
                   <CardContent>
                     <CardDescription className="text-base leading-relaxed">
-                      Each ticket is a unique NFT on the Solana blockchain, guaranteeing authenticity and complete
+                      Each ticket is a unique NFT on the Polkadot blockchain, guaranteeing authenticity and complete
                       traceability of all participations.
                     </CardDescription>
                   </CardContent>
@@ -791,7 +796,7 @@ export default function SolanaWalletApp() {
                   className="text-center hover:shadow-xl transition-all duration-300 transform hover:scale-105 hover:-translate-y-2 animate-slide-up"
                   style={{ animationDelay: "0.2s" }}
                 >
-                  <CardHeader className="pb-4">
+                  <CardHeader>
                     <div className="w-16 h-16 bg-gradient-to-br from-blue-100 to-blue-50 rounded-full flex items-center justify-center mx-auto mb-4">
                       <Eye className="w-8 h-8 text-blue-600" />
                     </div>
@@ -831,7 +836,7 @@ export default function SolanaWalletApp() {
                     <CardContent className="space-y-4">
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div className="text-center">
-                          <div className="text-2xl font-bold text-green-800">0.91 SOL</div>
+                          <div className="text-2xl font-bold text-green-800">0.91 DOT</div>
                           <div className="text-sm text-green-600">Amount Retained</div>
                         </div>
                         <div className="text-center">
@@ -839,14 +844,14 @@ export default function SolanaWalletApp() {
                           <div className="text-sm text-green-600">Stake Progress</div>
                         </div>
                         <div className="text-center">
-                          <div className="text-2xl font-bold text-green-800">50 SOL</div>
+                          <div className="text-2xl font-bold text-green-800">50 DOT</div>
                           <div className="text-sm text-green-600">Target</div>
                         </div>
                       </div>
                       <div className="space-y-2">
                         <div className="flex justify-between text-sm">
                           <span className="text-green-700">Stake Progress:</span>
-                          <span className="font-semibold text-green-800">0.91 / 50 SOL</span>
+                          <span className="font-semibold text-green-800">0.91 / 50 DOT</span>
                         </div>
                         <div className="w-full bg-green-200 rounded-full h-3">
                           <div
@@ -897,7 +902,7 @@ export default function SolanaWalletApp() {
                     <div className="text-left">
                       <h3 className="font-semibold mb-2">Guaranteed Security</h3>
                       <p className="text-muted-foreground text-sm">
-                        Solana blockchain protects all transactions and data.
+                        Polkadot blockchain protects all transactions and data.
                       </p>
                     </div>
                   </div>
@@ -945,7 +950,7 @@ export default function SolanaWalletApp() {
                         <div className="space-y-2">
                           <div className="flex justify-between text-sm">
                             <span className="text-muted-foreground">Price per ticket:</span>
-                            <span className="font-semibold text-primary">{raffle.ticketPrice} SOL</span>
+                            <span className="font-semibold text-primary">{raffle.ticketPrice} DOT</span>
                           </div>
                           <div className="flex justify-between text-sm">
                             <span className="text-muted-foreground">Tickets sold:</span>
@@ -979,8 +984,12 @@ export default function SolanaWalletApp() {
                 </div>
 
                 <div className="text-center mt-8">
-                  <Button onClick={goToRafflesDashboard} variant="outline" size="lg" className="bg-transparent">
-                    View All Raffles
+                  <Button
+                    onClick={goToRafflesDashboard}
+                    size="lg"
+                    className="bg-gradient-to-r from-primary to-blue-600 hover:from-primary/90 hover:to-blue-600/90 text-white font-semibold px-6 py-3 rounded-lg shadow-md hover:shadow-lg transform hover:scale-105 transition-all duration-200"
+                  >
+                    📊 View Analytics Dashboard
                     <ArrowRight className="w-4 h-4 ml-2" />
                   </Button>
                 </div>
