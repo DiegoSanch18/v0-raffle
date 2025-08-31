@@ -158,21 +158,21 @@ const connection = new Connection("https://api.mainnet-beta.solana.com") // Repl
 const generateRaffleData = () => {
   return Array.from({ length: 24 }, (_, i) => ({
     time: `${i}:00`,
-    ventas: Math.floor(Math.random() * 15) + 5,
-    ingresos: Math.floor(Math.random() * 3000) + 1000,
+    sales: Math.floor(Math.random() * 15) + 5,
+    revenue: Math.floor(Math.random() * 3000) + 1000,
   }))
 }
 
 const raffleNumbers = Array.from({ length: 1000 }, (_, i) => ({
   number: String(i + 1).padStart(4, "0"),
   sold: Math.random() > 0.3,
-  buyer: Math.random() > 0.3 ? `Usuario ${Math.floor(Math.random() * 200) + 1}` : null,
+  buyer: Math.random() > 0.3 ? `User ${Math.floor(Math.random() * 200) + 1}` : null,
 }))
 
 const topBuyers = [
   {
     id: 1,
-    name: "Usuario Anónimo #1",
+    name: "Anonymous User #1",
     tickets: 15,
     amount: 15000,
     avatar: "/diverse-user-avatars.png",
@@ -180,7 +180,7 @@ const topBuyers = [
   },
   {
     id: 2,
-    name: "Usuario Anónimo #2",
+    name: "Anonymous User #2",
     tickets: 12,
     amount: 12000,
     avatar: "/diverse-user-avatars.png",
@@ -188,7 +188,7 @@ const topBuyers = [
   },
   {
     id: 3,
-    name: "Usuario Anónimo #3",
+    name: "Anonymous User #3",
     tickets: 10,
     amount: 10000,
     avatar: "/diverse-user-avatars.png",
@@ -196,7 +196,7 @@ const topBuyers = [
   },
   {
     id: 4,
-    name: "Usuario Anónimo #4",
+    name: "Anonymous User #4",
     tickets: 8,
     amount: 8000,
     avatar: "/diverse-user-avatars.png",
@@ -204,7 +204,7 @@ const topBuyers = [
   },
   {
     id: 5,
-    name: "Usuario Anónimo #5",
+    name: "Anonymous User #5",
     tickets: 7,
     amount: 7000,
     avatar: "/diverse-user-avatars.png",
@@ -213,11 +213,11 @@ const topBuyers = [
 ]
 
 const prizes = [
-  { name: "1er Premio - Notebook Gamer", value: 800000, color: "hsl(var(--chart-1))" },
-  { name: "2do Premio - Smartphone", value: 300000, color: "hsl(var(--chart-2))" },
-  { name: "3er Premio - Tablet", value: 150000, color: "hsl(var(--chart-3))" },
-  { name: "4to Premio - Auriculares", value: 50000, color: "hsl(var(--chart-4))" },
-  { name: "5to Premio - Voucher", value: 25000, color: "hsl(var(--primary))" },
+  { name: "1st Prize - Gaming Laptop", value: 800000, color: "hsl(var(--chart-1))" },
+  { name: "2nd Prize - Smartphone", value: 300000, color: "hsl(var(--chart-2))" },
+  { name: "3rd Prize - Tablet", value: 150000, color: "hsl(var(--chart-3))" },
+  { name: "4th Prize - Headphones", value: 50000, color: "hsl(var(--chart-4))" },
+  { name: "5th Prize - Voucher", value: 25000, color: "hsl(var(--primary))" },
 ]
 
 export default function SolanaWalletApp() {
@@ -391,7 +391,7 @@ export default function SolanaWalletApp() {
     console.log("[v0] Tickets available:", raffle.maxTickets - raffle.ticketsIssued)
 
     if (!isConnected || !wallet) {
-      alert("Conecta tu wallet primero")
+      alert("Connect your wallet first")
       return
     }
 
@@ -461,7 +461,7 @@ export default function SolanaWalletApp() {
       !newRaffle.stakePercent ||
       !newRaffle.feePercent
     ) {
-      alert("Por favor completa todos los campos")
+      alert("Please complete all fields")
       return
     }
 
@@ -497,10 +497,10 @@ export default function SolanaWalletApp() {
       })
 
       setShowCreateRaffleModal(false)
-      alert("¡Rifa creada exitosamente!")
+      alert("Raffle created successfully!")
     } catch (error) {
       console.error("[v0] Failed to create raffle:", error)
-      alert("Error al crear la rifa. Intenta nuevamente.")
+      alert("Error creating raffle. Please try again.")
     } finally {
       setIsCreatingRaffle(false)
     }
@@ -509,7 +509,7 @@ export default function SolanaWalletApp() {
   const closeRaffle = async (raffleId: string) => {
     const raffle = mockRaffles.find((r) => r.id === raffleId)
     if (!raffle || raffle.ticketsIssued === 0) {
-      alert("No se puede cerrar una rifa sin participantes")
+      alert("Cannot close a raffle without participants")
       return
     }
 
@@ -532,7 +532,7 @@ export default function SolanaWalletApp() {
       setShowWinnerModal(true)
     } catch (error) {
       console.error("[v0] Failed to close raffle:", error)
-      alert("Error al cerrar la rifa. Intenta nuevamente.")
+      alert("Error closing raffle. Please try again.")
     }
   }
 
@@ -544,6 +544,13 @@ export default function SolanaWalletApp() {
     setShowLandingPage(true)
   }
 
+  const scrollToSection = (sectionId: string) => {
+    const element = document.getElementById(sectionId)
+    if (element) {
+      element.scrollIntoView({ behavior: "smooth" })
+    }
+  }
+
   const soldTickets = raffleNumbers.filter((ticket) => ticket.sold).length
   const availableTickets = 1000 - soldTickets
   const totalRevenue = soldTickets * 1000
@@ -551,28 +558,28 @@ export default function SolanaWalletApp() {
 
   const stats = [
     {
-      title: "Números Vendidos",
+      title: "Tickets Sold",
       value: soldTickets.toString(),
       change: `${Math.round((soldTickets / 1000) * 100)}%`,
       icon: Ticket,
       color: "text-chart-1",
     },
     {
-      title: "Números Disponibles",
+      title: "Available Tickets",
       value: availableTickets.toString(),
       change: `${Math.round((availableTickets / 1000) * 100)}%`,
       icon: Hash,
       color: "text-chart-2",
     },
     {
-      title: "Usuarios Anónimos",
+      title: "Anonymous Users",
       value: uniqueBuyers.toString(),
       change: "+12%",
       icon: Users,
       color: "text-chart-3",
     },
     {
-      title: "Recaudación Total",
+      title: "Total Revenue",
       value: `$${(totalRevenue / 1000).toFixed(0)}K`,
       change: "+25%",
       icon: DollarSign,
@@ -596,13 +603,45 @@ export default function SolanaWalletApp() {
                     <Ticket className="w-6 h-6 text-white" />
                   </div>
                   <div>
-                    <h1 className="text-xl font-bold text-balance">Rifa Blockchain</h1>
+                    <h1 className="text-xl font-bold text-balance">Blockchain Raffle</h1>
                     <p className="text-xs text-muted-foreground">AVEIT UTN FRC</p>
                   </div>
                 </div>
+                <nav className="hidden md:flex items-center space-x-6">
+                  <button
+                    onClick={() => scrollToSection("inicio")}
+                    className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors"
+                  >
+                    Home
+                  </button>
+                  <button
+                    onClick={() => scrollToSection("quienes-somos")}
+                    className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors"
+                  >
+                    About Us
+                  </button>
+                  <button
+                    onClick={() => scrollToSection("como-funciona")}
+                    className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors"
+                  >
+                    How It Works
+                  </button>
+                  <button
+                    onClick={() => scrollToSection("stake-garantia")}
+                    className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors"
+                  >
+                    Stake Guarantee
+                  </button>
+                  <button
+                    onClick={() => scrollToSection("rifas-disponibles")}
+                    className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors"
+                  >
+                    Buy Your Ticket
+                  </button>
+                </nav>
                 <div className="flex items-center space-x-4">
                   <Button variant="outline" onClick={goToRafflesDashboard} className="bg-transparent">
-                    Ver Dashboard
+                    View Dashboard
                   </Button>
                   {!isConnected ? (
                     <Button
@@ -613,12 +652,12 @@ export default function SolanaWalletApp() {
                       {isConnecting ? (
                         <>
                           <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
-                          Conectando...
+                          Connecting...
                         </>
                       ) : (
                         <>
                           <Wallet className="w-4 h-4 mr-2" />
-                          Conectar Wallet
+                          Connect Wallet
                         </>
                       )}
                     </Button>
@@ -636,7 +675,7 @@ export default function SolanaWalletApp() {
                         onClick={disconnectWallet}
                         className="bg-transparent hover:bg-destructive/10 hover:text-destructive hover:border-destructive/20"
                       >
-                        Desconectar
+                        Disconnect
                       </Button>
                     </div>
                   )}
@@ -647,14 +686,13 @@ export default function SolanaWalletApp() {
 
           <main className="container mx-auto px-4">
             {/* Hero Section */}
-            <section className="py-20 text-center">
+            <section id="inicio" className="py-20 text-center">
               <div className="max-w-4xl mx-auto">
                 <h1 className="text-4xl md:text-6xl font-bold bg-gradient-to-r from-primary via-blue-600 to-green-600 bg-clip-text text-transparent mb-6 text-balance animate-slide-up">
-                  Rifa Transparente en Blockchain
+                  Transparent Blockchain Raffle
                 </h1>
                 <p className="text-xl md:text-2xl text-muted-foreground mb-12 text-pretty max-w-3xl mx-auto leading-relaxed animate-slide-up">
-                  Un proyecto de AVEIT que reemplaza la certificación de Lotería con un sistema descentralizado en
-                  Solana.
+                  An AVEIT project that replaces Lottery certification with a decentralized system on Solana.
                 </p>
 
                 <Button
@@ -663,87 +701,70 @@ export default function SolanaWalletApp() {
                   className="bg-gradient-to-r from-primary to-blue-600 hover:from-primary/90 hover:to-blue-600/90 text-white px-8 py-6 text-lg font-semibold rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 animate-slide-up"
                 >
                   <Sparkles className="w-5 h-5 mr-2" />
-                  Ver Dashboard de Rifas
+                  View Raffle Dashboard
                 </Button>
               </div>
             </section>
 
-             {/* Stake Section */}
-            <section className="py-16">
-              <div className="max-w-4xl mx-auto">
-                <div className="text-center mb-12">
-                  <h2 className="text-3xl font-bold text-foreground mb-4">Stake de Garantía</h2>
-                  <p className="text-lg text-muted-foreground">Cómo funciona el stake en nuestro sistema de rifas.</p>
-                </div>
-
-                <div className="mt-12 max-w-4xl mx-auto">
-                  <Card className="bg-gradient-to-r from-green-50 to-emerald-50 border-green-200 animate-slide-up">
-                    <CardHeader>
-                      <CardTitle className="flex items-center space-x-2 text-green-800">
-                        <div className="w-6 h-6 bg-green-600 rounded-full flex items-center justify-center">
-                          <CheckCircle className="w-4 h-4 text-white" />
-                        </div>
-                        <span>Stake de Garantía</span>
-                      </CardTitle>
-                      <CardDescription className="text-green-700">
-                        El stake funciona como garantía de transparencia, reemplazando el rol de Lotería.
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div className="text-center">
-                          <div className="text-2xl font-bold text-green-800">0.91 SOL</div>
-                          <div className="text-sm text-green-600">Monto Retenido</div>
-                        </div>
-                        <div className="text-center">
-                          <div className="text-2xl font-bold text-green-800">1.8%</div>
-                          <div className="text-sm text-green-600">Progreso del Stake</div>
-                        </div>
-                        <div className="text-center">
-                          <div className="text-2xl font-bold text-green-800">50 SOL</div>
-                          <div className="text-sm text-green-600">Objetivo</div>
-                        </div>
-                      </div>
-                      <div className="space-y-2">
-                        <div className="flex justify-between text-sm">
-                          <span className="text-green-700">Progreso del Stake:</span>
-                          <span className="font-semibold text-green-800">0.91 / 50 SOL</span>
-                        </div>
-                        <div className="w-full bg-green-200 rounded-full h-3">
-                          <div
-                            className="bg-gradient-to-r from-green-500 to-emerald-600 h-3 rounded-full transition-all duration-500"
-                            style={{ width: "1.821%" }}
-                          ></div>
-                        </div>
-                      </div>
-                      <div className="bg-white/50 p-4 rounded-lg border border-green-200">
-                        <p className="text-sm text-green-700 leading-relaxed">
-                          <strong>¿Cómo funciona?</strong> Un porcentaje de cada venta se retiene como stake de
-                          garantía. Este fondo asegura la transparencia del proceso y reemplaza la necesidad de una
-                          autoridad central como Lotería Nacional. Los fondos se liberan automáticamente al finalizar
-                          cada rifa.
-                        </p>
-                      </div>
-                    </CardContent>
-                  </Card>
+            {/* About Us Section */}
+            <section id="quienes-somos" className="py-16">
+              <div className="max-w-4xl mx-auto text-center">
+                <h2 className="text-3xl font-bold text-foreground mb-6">About Us</h2>
+                <p className="text-lg text-muted-foreground leading-relaxed mb-8">
+                  We are a non-profit association formed by students from the National Technological University, Córdoba
+                  Regional Faculty. We seek to enrich the university journey of our members by conducting social impact,
+                  training, and recreational activities.
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-12">
+                  <div className="text-center">
+                    <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <Users className="w-6 h-6 text-primary" />
+                    </div>
+                    <h3 className="font-semibold mb-2">Student Community</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Formed by students and engineers passionate about technology
+                    </p>
+                  </div>
+                  <div className="text-center">
+                    <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <Zap className="w-6 h-6 text-primary" />
+                    </div>
+                    <h3 className="font-semibold mb-2">Innovation</h3>
+                    <p className="text-sm text-muted-foreground">
+                      We develop projects that transform ideas into real solutions
+                    </p>
+                  </div>
+                  <div className="text-center">
+                    <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <Shield className="w-6 h-6 text-primary" />
+                    </div>
+                    <h3 className="font-semibold mb-2">Transparency</h3>
+                    <p className="text-sm text-muted-foreground">
+                      We believe in transparency and decentralization as fundamental pillars
+                    </p>
+                  </div>
                 </div>
               </div>
             </section>
 
             {/* Features Section */}
-            <section className="py-16">
+            <section id="como-funciona" className="py-16">
+              <div className="text-center mb-12">
+                <h2 className="text-3xl font-bold text-foreground mb-4">How It Works</h2>
+                <p className="text-lg text-muted-foreground">Blockchain technology for transparent raffles</p>
+              </div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
                 <Card className="text-center hover:shadow-xl transition-all duration-300 transform hover:scale-105 hover:-translate-y-2 animate-slide-up">
                   <CardHeader className="pb-4">
                     <div className="w-16 h-16 bg-gradient-to-br from-primary/20 to-primary/10 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
                       <Ticket className="w-8 h-8 text-primary" />
                     </div>
-                    <CardTitle className="text-xl">Boletas tokenizadas como NFTs</CardTitle>
+                    <CardTitle className="text-xl">Tickets tokenized as NFTs</CardTitle>
                   </CardHeader>
                   <CardContent>
                     <CardDescription className="text-base leading-relaxed">
-                      Cada boleta es un NFT único en la blockchain de Solana, garantizando autenticidad y trazabilidad
-                      completa de todas las participaciones.
+                      Each ticket is a unique NFT on the Solana blockchain, guaranteeing authenticity and complete
+                      traceability of all participations.
                     </CardDescription>
                   </CardContent>
                 </Card>
@@ -756,12 +777,12 @@ export default function SolanaWalletApp() {
                     <div className="w-16 h-16 bg-gradient-to-br from-green-100 to-green-50 rounded-full flex items-center justify-center mx-auto mb-4">
                       <Shield className="w-8 h-8 text-green-600" />
                     </div>
-                    <CardTitle className="text-xl">Stake como garantía transparente</CardTitle>
+                    <CardTitle className="text-xl">Stake as transparent guarantee</CardTitle>
                   </CardHeader>
                   <CardContent>
                     <CardDescription className="text-base leading-relaxed">
-                      Un porcentaje de cada venta se retiene como garantía, eliminando la necesidad de autoridades
-                      centrales y asegurando transparencia total.
+                      A percentage of each sale is retained as a guarantee, eliminating the need for central authorities
+                      and ensuring total transparency.
                     </CardDescription>
                   </CardContent>
                 </Card>
@@ -774,25 +795,86 @@ export default function SolanaWalletApp() {
                     <div className="w-16 h-16 bg-gradient-to-br from-blue-100 to-blue-50 rounded-full flex items-center justify-center mx-auto mb-4">
                       <Eye className="w-8 h-8 text-blue-600" />
                     </div>
-                    <CardTitle className="text-xl">Sorteo auditable en la blockchain</CardTitle>
+                    <CardTitle className="text-xl">Auditable draw on blockchain</CardTitle>
                   </CardHeader>
                   <CardContent>
                     <CardDescription className="text-base leading-relaxed">
-                      La selección del ganador utiliza algoritmos verificables en blockchain, permitiendo que cualquiera
-                      pueda auditar el proceso de sorteo.
+                      Winner selection uses verifiable algorithms on blockchain, allowing anyone to audit the drawing
+                      process.
                     </CardDescription>
                   </CardContent>
                 </Card>
               </div>
             </section>
 
+            {/* Stake Section */}
+            <section id="stake-garantia" className="py-16">
+              <div className="max-w-4xl mx-auto">
+                <div className="text-center mb-12">
+                  <h2 className="text-3xl font-bold text-foreground mb-4">Stake Guarantee</h2>
+                  <p className="text-lg text-muted-foreground">How the stake works in our raffle system.</p>
+                </div>
+
+                <div className="mt-12 max-w-4xl mx-auto">
+                  <Card className="bg-gradient-to-r from-green-50 to-emerald-50 border-green-200 animate-slide-up">
+                    <CardHeader>
+                      <CardTitle className="flex items-center space-x-2 text-green-800">
+                        <div className="w-6 h-6 bg-green-600 rounded-full flex items-center justify-center">
+                          <CheckCircle className="w-4 h-4 text-white" />
+                        </div>
+                        <span>Stake Guarantee</span>
+                      </CardTitle>
+                      <CardDescription className="text-green-700">
+                        The stake functions as a transparency guarantee, replacing the role of the Lottery.
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="text-center">
+                          <div className="text-2xl font-bold text-green-800">0.91 SOL</div>
+                          <div className="text-sm text-green-600">Amount Retained</div>
+                        </div>
+                        <div className="text-center">
+                          <div className="text-2xl font-bold text-green-800">1.8%</div>
+                          <div className="text-sm text-green-600">Stake Progress</div>
+                        </div>
+                        <div className="text-center">
+                          <div className="text-2xl font-bold text-green-800">50 SOL</div>
+                          <div className="text-sm text-green-600">Target</div>
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <div className="flex justify-between text-sm">
+                          <span className="text-green-700">Stake Progress:</span>
+                          <span className="font-semibold text-green-800">0.91 / 50 SOL</span>
+                        </div>
+                        <div className="w-full bg-green-200 rounded-full h-3">
+                          <div
+                            className="bg-gradient-to-r from-green-500 to-emerald-600 h-3 rounded-full transition-all duration-500"
+                            style={{ width: "1.821%" }}
+                          ></div>
+                        </div>
+                      </div>
+                      <div className="bg-white/50 p-4 rounded-lg border border-green-200">
+                        <p className="text-sm text-green-700 leading-relaxed">
+                          <strong>How does it work?</strong> A percentage of each sale is retained as a stake guarantee.
+                          This fund ensures process transparency and replaces the need for a central authority like the
+                          National Lottery. Funds are automatically released at the end of each raffle.
+                        </p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              </div>
+            </section>
+
             {/* Additional Info Section */}
             <section className="py-16 bg-muted/30 -mx-4 px-4">
               <div className="max-w-4xl mx-auto text-center">
-                <h2 className="text-3xl font-bold text-foreground mb-6">¿Por qué blockchain?</h2>
+                <h2 className="text-3xl font-bold text-foreground mb-6">Why blockchain?</h2>
                 <p className="text-lg text-muted-foreground leading-relaxed mb-8">
-                  La tecnología blockchain elimina la necesidad de confiar en autoridades centrales. Cada transacción,
-                  cada boleta y cada sorteo queda registrado de forma inmutable y verificable por cualquier persona.
+                  Blockchain technology eliminates the need to trust central authorities. Every transaction, every
+                  ticket, and every draw is recorded immutably and verifiably by anyone.
                 </p>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-12">
@@ -801,9 +883,9 @@ export default function SolanaWalletApp() {
                       <Zap className="w-4 h-4 text-primary" />
                     </div>
                     <div className="text-left">
-                      <h3 className="font-semibold mb-2">Transparencia Total</h3>
+                      <h3 className="font-semibold mb-2">Total Transparency</h3>
                       <p className="text-muted-foreground text-sm">
-                        Todos los procesos son públicos y verificables en tiempo real.
+                        All processes are public and verifiable in real time.
                       </p>
                     </div>
                   </div>
@@ -813,9 +895,9 @@ export default function SolanaWalletApp() {
                       <Shield className="w-4 h-4 text-primary" />
                     </div>
                     <div className="text-left">
-                      <h3 className="font-semibold mb-2">Seguridad Garantizada</h3>
+                      <h3 className="font-semibold mb-2">Guaranteed Security</h3>
                       <p className="text-muted-foreground text-sm">
-                        La blockchain de Solana protege todas las transacciones y datos.
+                        Solana blockchain protects all transactions and data.
                       </p>
                     </div>
                   </div>
@@ -823,12 +905,12 @@ export default function SolanaWalletApp() {
               </div>
             </section>
 
-            {/* Rifas Section */}
-            <section className="py-16">
+            {/* Raffles Section */}
+            <section id="rifas-disponibles" className="py-16">
               <div className="max-w-6xl mx-auto">
                 <div className="text-center mb-12">
-                  <h2 className="text-3xl font-bold text-foreground mb-4">Rifas Disponibles</h2>
-                  <p className="text-lg text-muted-foreground">Participa en rifas transparentes y descentralizadas</p>
+                  <h2 className="text-3xl font-bold text-foreground mb-4">Available Raffles</h2>
+                  <p className="text-lg text-muted-foreground">Participate in transparent and decentralized raffles</p>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -846,15 +928,15 @@ export default function SolanaWalletApp() {
                             className={`${raffle.isActive ? "bg-green-100 text-green-800 animate-pulse-success" : "bg-accent/20"}`}
                           >
                             <Ticket className="w-3 h-3 mr-1" />
-                            {raffle.isActive ? "Activa" : "Cerrada"}
+                            {raffle.isActive ? "Active" : "Closed"}
                           </Badge>
                         </div>
                         <CardDescription>
-                          Organizado por {raffle.organizer}
+                          Organized by {raffle.organizer}
                           {!raffle.isActive && raffle.winner && (
                             <div className="flex items-center mt-1 text-green-600 animate-pulse-success">
                               <Trophy className="w-3 h-3 mr-1" />
-                              Ganador: {raffle.winner}
+                              Winner: {raffle.winner}
                             </div>
                           )}
                         </CardDescription>
@@ -862,11 +944,11 @@ export default function SolanaWalletApp() {
                       <CardContent className="space-y-4">
                         <div className="space-y-2">
                           <div className="flex justify-between text-sm">
-                            <span className="text-muted-foreground">Precio por boleta:</span>
+                            <span className="text-muted-foreground">Price per ticket:</span>
                             <span className="font-semibold text-primary">{raffle.ticketPrice} SOL</span>
                           </div>
                           <div className="flex justify-between text-sm">
-                            <span className="text-muted-foreground">Boletas vendidas:</span>
+                            <span className="text-muted-foreground">Tickets sold:</span>
                             <span className="font-semibold">
                               {raffle.ticketsIssued} / {raffle.maxTickets}
                             </span>
@@ -884,12 +966,12 @@ export default function SolanaWalletApp() {
                           disabled={!isConnected || raffle.ticketsIssued >= raffle.maxTickets || !raffle.isActive}
                         >
                           {!isConnected
-                            ? "Conectar Wallet"
+                            ? "Connect Wallet"
                             : !raffle.isActive
-                              ? "Cerrada"
+                              ? "Closed"
                               : raffle.ticketsIssued >= raffle.maxTickets
-                                ? "Agotado"
-                                : "Comprar Boleta"}
+                                ? "Sold Out"
+                                : "Buy Ticket"}
                         </Button>
                       </CardContent>
                     </Card>
@@ -898,7 +980,7 @@ export default function SolanaWalletApp() {
 
                 <div className="text-center mt-8">
                   <Button onClick={goToRafflesDashboard} variant="outline" size="lg" className="bg-transparent">
-                    Ver Todas las Rifas
+                    View All Raffles
                     <ArrowRight className="w-4 h-4 ml-2" />
                   </Button>
                 </div>
