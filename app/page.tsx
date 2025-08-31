@@ -153,7 +153,7 @@ declare global {
   }
 }
 
-const connection = new Connection("https://api.mainnet-beta.solana.com") // Replace with your Solana RPC endpoint
+const connection = new Connection("https://api.devnet.solana.com") // Devnet para pruebas
 
 const generateRaffleData = () => {
   return Array.from({ length: 24 }, (_, i) => ({

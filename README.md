@@ -37,19 +37,49 @@ Este es un contrato inteligente desarrollado con Seahorse (Python) para crear y 
 5. `claim_prize` - Reclama el premio
 6. `get_raffle_info` - Obtiene información de la rifa
 
-## Compilación
+## Compilación (Seahorse)
 
-Para compilar este contrato con Seahorse:
+En una terminal con Solana CLI instalado (ideal WSL Ubuntu):
 
-\`\`\`bash
-seahorse build
-\`\`\`
+```bash
+# Ver ayuda y comandos disponibles según tu versión
+seahorse --help
 
-## Despliegue
+# Compilar el programa (según versión puede ser build/compile)
+seahorse build scripts/raffle_program.py
+# o
+seahorse compile scripts/raffle_program.py
+```
 
-\`\`\`bash
-anchor deploy
-\`\`\`
+Esto genera un proyecto Anchor/Rust y el binario `.so` del programa dentro de `target/`.
+
+## Despliegue a Devnet
+
+```bash
+solana config set --url https://api.devnet.solana.com
+solana-keygen new            # si no tenés wallet local
+solana airdrop 2             # fondos de prueba
+
+# Despliegue del binario (ajustá la ruta al .so generado)
+solana program deploy target/deploy/raffle_program.so
+```
+
+Anotá el `PROGRAM ID` que imprime el despliegue. Reemplázalo en `declare_id` del contrato y en el frontend via env.
+
+## Configuración del Frontend
+
+Agregá un archivo `.env.local` en la raíz del proyecto con:
+
+```
+NEXT_PUBLIC_SOLANA_RPC=https://api.devnet.solana.com
+NEXT_PUBLIC_PROGRAM_ID=<TU_PROGRAM_ID_EN_DEVNET>
+```
+
+Levantá la app:
+
+```bash
+pnpm dev
+```
 
 ## Seguridad
 
@@ -60,7 +90,8 @@ anchor deploy
 
 ## Notas Técnicas
 
-- Usa Array[Pubkey, 1000] para almacenar hasta 1000 participantes
-- Implementa distribución automática de pagos
-- Utiliza blockhash como fuente de aleatoriedad (pseudoaleatoria)
-- Maneja estados de rifa (abierta/cerrada)
+- Un solo programa; cada rifa es una cuenta PDA (`seeds=['raffle', organizer, raffle_seed]`).
+- Stake se deposita en una PDA escrow (`seeds=['raffle_escrow', raffle_pubkey]`).
+- Array de participantes limitado a 1024 por costo de renta; para producción, usar cuentas `Ticket`.
+- Aleatoriedad con blockhash es pseudoaleatoriedad; para producción usar VRF (Switchboard) o commit-reveal.
+- `claim_prize` intenta transferir desde la PDA (requiere `invoke_signed`). Verificá soporte de tu versión de Seahorse.

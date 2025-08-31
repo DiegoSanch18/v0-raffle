@@ -5,9 +5,31 @@ export default class SolanaRaffleClient {
   private programId: PublicKey
 
   constructor() {
-    // Conectar a devnet/mainnet
-    this.connection = new Connection("https://api.devnet.solana.com")
-    this.programId = new PublicKey("TU_PROGRAM_ID_AQUI") // Reemplazar con ID real
+    const rpcUrl = process.env.NEXT_PUBLIC_SOLANA_RPC || "https://api.devnet.solana.com"
+    const programIdStr = process.env.NEXT_PUBLIC_PROGRAM_ID || "TU_PROGRAM_ID_AQUI"
+
+    // Conectar a devnet/mainnet desde variable de entorno
+    this.connection = new Connection(rpcUrl)
+    this.programId = new PublicKey(programIdStr) // Reemplazar con ID real en .env.local
+  }
+
+  // PDAs (deben coincidir con los seeds del programa Seahorse)
+  deriveRafflePda(organizer: PublicKey, raffleSeed: string): PublicKey {
+    // seeds = ['raffle', organizer, raffle_seed]
+    const [pda] = PublicKey.findProgramAddressSync(
+      [Buffer.from('raffle'), organizer.toBuffer(), Buffer.from(raffleSeed)],
+      this.programId,
+    )
+    return pda
+  }
+
+  deriveEscrowPda(rafflePda: PublicKey): PublicKey {
+    // seeds = ['raffle_escrow', raffle_pubkey]
+    const [pda] = PublicKey.findProgramAddressSync(
+      [Buffer.from('raffle_escrow'), rafflePda.toBuffer()],
+      this.programId,
+    )
+    return pda
   }
 
   async buyTicket(raffleId: string, walletPublicKey: PublicKey) {
@@ -30,11 +52,12 @@ export default class SolanaRaffleClient {
     // Lógica para crear la instrucción del contrato
     // Esto se conectaría con tu programa Seahorse compilado
 
-    // Mock instruction for now - replace with actual Seahorse program interaction
+    // TODO: Reemplazar con instrucción real del programa (buy_ticket)
+    // Temporal: transferencia mock para pruebas locales (NO PRODUCCIÓN)
     return SystemProgram.transfer({
       fromPubkey: buyer,
       toPubkey: this.programId,
-      lamports: 100000000, // 0.1 SOL in lamports
+      lamports: 1000000, // 0.001 SOL en lamports
     })
   }
 
