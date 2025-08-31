@@ -1,23 +1,23 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { Button } from "@/components/ui/button"
+import { useState, useEffect, useCallback } from "react"
+import { useRouter } from "next/navigation" // Changed from next/router to next/navigation for App Router
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import {
-  CheckCircle,
-  Ticket,
   Trophy,
-  Shield,
-  Zap,
-  Eye,
-  Sparkles,
   Users,
   DollarSign,
-  Hash,
   ArrowRight,
+  Shield,
+  Zap,
+  CheckCircle,
+  Ticket,
+  Hash,
+  Sparkles,
+  Eye,
 } from "lucide-react"
-import { useRouter } from "next/router"
 
 const createConfetti = () => {
   const colors = ["#ff6b6b", "#4ecdc4", "#45b7d1", "#96ceb4", "#feca57", "#ff9ff3", "#54a0ff"]
@@ -45,22 +45,28 @@ const createConfetti = () => {
 }
 
 const playSuccessSound = () => {
-  const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)()
-  const oscillator = audioContext.createOscillator()
-  const gainNode = audioContext.createGain()
+  if (typeof window === "undefined") return
 
-  oscillator.connect(gainNode)
-  gainNode.connect(audioContext.destination)
+  try {
+    const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)()
+    const oscillator = audioContext.createOscillator()
+    const gainNode = audioContext.createGain()
 
-  oscillator.frequency.setValueAtTime(523.25, audioContext.currentTime) // C5
-  oscillator.frequency.setValueAtTime(659.25, audioContext.currentTime + 0.1) // E5
-  oscillator.frequency.setValueAtTime(783.99, audioContext.currentTime + 0.2) // G5
+    oscillator.connect(gainNode)
+    gainNode.connect(audioContext.destination)
 
-  gainNode.gain.setValueAtTime(0.3, audioContext.currentTime)
-  gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5)
+    oscillator.frequency.setValueAtTime(523.25, audioContext.currentTime) // C5
+    oscillator.frequency.setValueAtTime(659.25, audioContext.currentTime + 0.1) // E5
+    oscillator.frequency.setValueAtTime(783.99, audioContext.currentTime + 0.2) // G5
 
-  oscillator.start(audioContext.currentTime)
-  oscillator.stop(audioContext.currentTime + 0.5)
+    gainNode.gain.setValueAtTime(0.3, audioContext.currentTime)
+    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5)
+
+    oscillator.start(audioContext.currentTime)
+    oscillator.stop(audioContext.currentTime + 0.5)
+  } catch (error) {
+    console.log("[v0] Audio not supported")
+  }
 }
 
 interface PolkadotExtension {
@@ -263,7 +269,7 @@ const stakePool: StakePool = {
   lockPeriod: 30,
 }
 
-export default function PolkadotRaffleApp() {
+export default function RaffleApp() {
   const [isConnected, setIsConnected] = useState(false)
   const [publicKey, setPublicKey] = useState("")
   const [isConnecting, setIsConnecting] = useState(false)
@@ -358,9 +364,11 @@ export default function PolkadotRaffleApp() {
   }, [])
 
   useEffect(() => {
+    if (typeof window === "undefined") return
+
     console.log("[v0] Browser:", navigator.userAgent.includes("Chrome") ? "Chrome-based" : "Other")
-    console.log("[v0] Window injectedWeb3:", window.injectedWeb3)
-    console.log("[v0] Available extensions:", Object.keys(window.injectedWeb3 || {}))
+    console.log("[v0] Window injectedWeb3:", (window as any).injectedWeb3)
+    console.log("[v0] Available extensions:", Object.keys((window as any).injectedWeb3 || {}))
 
     // Check for Polkadot extensions with delay to allow extension loading
     setTimeout(() => {
@@ -722,7 +730,9 @@ export default function PolkadotRaffleApp() {
   ]
 
   const goToRafflesDashboard = () => {
-    router.push("/rifas")
+    if (typeof window !== "undefined") {
+      router.push("/rifas")
+    }
   }
 
   const connectWallet = async () => {
@@ -767,6 +777,65 @@ export default function PolkadotRaffleApp() {
       setIsConnecting(false)
     }
   }
+
+  const createConfetti = useCallback(() => {
+    if (typeof window === "undefined") return
+
+    const canvas = document.createElement("canvas")
+    const ctx = canvas.getContext("2d")
+    if (!ctx) return
+
+    canvas.style.position = "fixed"
+    canvas.style.top = "0"
+    canvas.style.left = "0"
+    canvas.style.pointerEvents = "none"
+    canvas.style.zIndex = "9999"
+    canvas.width = window.innerWidth
+    canvas.height = window.innerHeight
+
+    const colors = ["#ff6b6b", "#4ecdc4", "#45b7d1", "#96ceb4", "#feca57", "#ff9ff3", "#54a0ff"]
+    const confettiCount = 200
+
+    for (let i = 0; i < confettiCount; i++) {
+      const confettiPiece = document.createElement("div")
+      confettiPiece.style.position = "absolute"
+      confettiPiece.style.width = "10px"
+      confettiPiece.style.height = "10px"
+      confettiPiece.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)]
+      confettiPiece.style.borderRadius = "50%"
+      confettiPiece.style.left = `${Math.random() * 100}vw`
+      confettiPiece.style.top = `${Math.random() * 100}vh`
+      confettiPiece.style.zIndex = "9999"
+      confettiPiece.style.transition = "transform 0.5s ease-out, opacity 0.5s ease-out"
+
+      canvas.appendChild(confettiPiece)
+
+      const angle = Math.random() * Math.PI * 2
+      const distance = Math.random() * 50
+
+      const x = Math.cos(angle) * distance
+      const y = Math.sin(angle) * distance
+
+      setTimeout(() => {
+        confettiPiece.style.transform = `translate(${x}px, ${y}px)`
+        confettiPiece.style.opacity = "0"
+      }, 10)
+
+      setTimeout(() => {
+        if (confettiPiece.parentNode) {
+          confettiPiece.parentNode.removeChild(confettiPiece)
+        }
+      }, 500)
+    }
+
+    document.body.appendChild(canvas)
+
+    setTimeout(() => {
+      if (canvas.parentNode) {
+        document.body.removeChild(canvas)
+      }
+    }, 500)
+  }, [])
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
