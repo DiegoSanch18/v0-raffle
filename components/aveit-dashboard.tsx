@@ -390,3 +390,5 @@ export default function AVEITRaffleDashboard() {
     </div>
   )
 }
+
+export { AVEITRaffleDashboard as AveitDashboard }

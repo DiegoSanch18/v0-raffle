@@ -96,9 +96,27 @@ interface NFTTicket {
   id: string
   raffleId: string
   raffleTitle: string
-  ticketNumber: number
+  ticketNumber: string
   purchaseDate: string
   qrCode: string
+  transactionHash: string
+  purchasePrice: number
+}
+
+interface StakeParticipation {
+  userId: string
+  amount: number
+  timestamp: string
+  raffleId: string
+  expectedReturn: number
+}
+
+interface StakePool {
+  totalStaked: number
+  participants: StakeParticipation[]
+  currentAPY: number
+  minimumStake: number
+  lockPeriod: number // in days
 }
 
 // Mock raffle data - will be replaced with Polkadot contract data
@@ -160,6 +178,8 @@ const generateRaffleData = () => {
     time: `${i}:00`,
     sales: Math.floor(Math.random() * 15) + 5,
     revenue: Math.floor(Math.random() * 3000) + 1000,
+    totalStake: Math.floor(Math.random() * 500) + 100,
+    totalTicketsSold: Math.floor(Math.random() * 1000) + 100,
   }))
 }
 
@@ -220,20 +240,30 @@ const prizes = [
   { name: "5th Prize - Voucher", value: 25000, color: "hsl(var(--primary))" },
 ]
 
+const stakePool: StakePool = {
+  totalStaked: 0,
+  participants: [],
+  currentAPY: 5,
+  minimumStake: 100,
+  lockPeriod: 30,
+}
+
 export default function SolanaWalletApp() {
   const [wallet, setWallet] = useState<PhantomProvider | null>(null)
   const [isConnected, setIsConnected] = useState(false)
   const [publicKey, setPublicKey] = useState<string>("")
   const [isConnecting, setIsConnecting] = useState(false)
   const [copied, setCopied] = useState(false)
+  const [showCreateRaffleModal, setShowCreateRaffleModal] = useState(false)
   const [showPurchaseModal, setShowPurchaseModal] = useState(false)
   const [selectedRaffle, setSelectedRaffle] = useState<Raffle | null>(null)
-  const [isPurchasing, setIsPurchasing] = useState(false)
-  const [showSuccessModal, setShowSuccessModal] = useState(false)
-  const [userTickets, setUserTickets] = useState<NFTTicket[]>([])
+  const [isProcessing, setIsProcessing] = useState(false)
+  const [showWinnerModal, setShowWinnerModal] = useState(false)
+  const [winnerInfo, setWinnerInfo] = useState<{ raffle: Raffle; winner: string } | null>(null)
   const [showTicketsModal, setShowTicketsModal] = useState(false)
+  const [showStakeRewardsModal, setShowStakeRewardsModal] = useState(false)
+  const [userTickets, setUserTickets] = useState<NFTTicket[]>([])
   const [isAdmin, setIsAdmin] = useState(false)
-  const [showCreateRaffleModal, setShowCreateRaffleModal] = useState(false)
   const [showAdminDashboard, setShowAdminDashboard] = useState(false)
   const [newRaffle, setNewRaffle] = useState({
     title: "",
@@ -243,14 +273,13 @@ export default function SolanaWalletApp() {
     feePercent: "",
   })
   const [isCreatingRaffle, setIsCreatingRaffle] = useState(false)
-  const [showWinnerModal, setShowWinnerModal] = useState(false)
-  const [selectedWinner, setSelectedWinner] = useState<{ raffle: Raffle; winner: string } | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [purchaseStep, setPurchaseStep] = useState<"confirm" | "processing" | "success">("confirm")
   const [raffleData, setRaffleData] = useState(generateRaffleData())
   const [currentTime, setCurrentTime] = useState(new Date())
   const [showLandingPage, setShowLandingPage] = useState(true)
   const router = useRouter()
+  const [showSuccessModal, setShowSuccessModal] = useState(false)
 
   useEffect(() => {
     const style = document.createElement("style")
@@ -396,6 +425,23 @@ export default function SolanaWalletApp() {
       return
     }
 
+    if (raffle.ticketsIssued >= raffle.maxTickets) {
+      alert("Sorry, this raffle is sold out!")
+      return
+    }
+
+    if (!raffle.isActive) {
+      alert("This raffle is no longer active")
+      return
+    }
+
+    // Check if user already has a ticket for this raffle
+    const hasTicket = userTickets.some((ticket) => ticket.raffleId === raffle.id)
+    if (hasTicket) {
+      alert("You already have a ticket for this raffle!")
+      return
+    }
+
     setSelectedRaffle(raffle)
     setShowPurchaseModal(true)
   }
@@ -403,15 +449,29 @@ export default function SolanaWalletApp() {
   const confirmPurchase = async () => {
     if (!selectedRaffle) return
 
-    setIsPurchasing(true)
-    setPurchaseStep("processing")
+    setIsProcessing(true)
 
     try {
-      await new Promise((resolve) => setTimeout(resolve, 800)) // Wallet confirmation
       setPurchaseStep("processing")
-      await new Promise((resolve) => setTimeout(resolve, 1200)) // Transaction processing
+      await new Promise((resolve) => setTimeout(resolve, 1000)) // Wallet signature
 
-      // Mock transaction
+      // Simulate blockchain confirmation
+      await new Promise((resolve) => setTimeout(resolve, 1500)) // Network processing
+
+      const ticketPrice = selectedRaffle.ticketPrice
+      const feeAmount = (ticketPrice * selectedRaffle.feePercent) / 100
+      const stakeAmount = (ticketPrice * selectedRaffle.stakePercent) / 100
+      const organizerAmount = ticketPrice - feeAmount - stakeAmount
+
+      console.log("[v0] Payment distribution:", {
+        total: ticketPrice,
+        fee: feeAmount,
+        stake: stakeAmount,
+        organizer: organizerAmount,
+      })
+
+      const txHash = `${Math.random().toString(36).substring(2, 15)}${Math.random().toString(36).substring(2, 15)}`
+
       const newTicket: NFTTicket = {
         id: `ticket-${Date.now()}`,
         raffleId: selectedRaffle.id,
@@ -419,24 +479,35 @@ export default function SolanaWalletApp() {
         ticketNumber: (selectedRaffle.ticketsIssued + 1).toString().padStart(4, "0"),
         purchaseDate: new Date().toLocaleDateString(),
         qrCode: `${selectedRaffle.id}-${Date.now()}`,
+        transactionHash: txHash,
+        purchasePrice: ticketPrice,
       }
 
-      // Update raffle data
       const updatedRaffles = mockRaffles.map((raffle) =>
         raffle.id === selectedRaffle.id
           ? {
               ...raffle,
               ticketsIssued: raffle.ticketsIssued + 1,
               totalRaised: raffle.totalRaised + raffle.ticketPrice,
+              // Add participant to the list
+              participants: [...raffle.participants, publicKey || "Unknown"],
             }
           : raffle,
       )
 
       setUserTickets((prev) => [...prev, newTicket])
 
+      setRaffleData((prev) => ({
+        ...prev,
+        totalStake: prev.totalStake + stakeAmount,
+        totalTicketsSold: prev.totalTicketsSold + 1,
+      }))
+
       setPurchaseStep("success")
       playSuccessSound()
       createConfetti()
+
+      console.log("[v0] Transaction successful:", txHash)
 
       setTimeout(() => {
         setShowPurchaseModal(false)
@@ -445,8 +516,11 @@ export default function SolanaWalletApp() {
       }, 1500)
     } catch (error) {
       console.error("Purchase failed:", error)
+      alert("Transaction failed. Please try again.")
+      setIsProcessing(false)
+      setPurchaseStep("confirm")
     } finally {
-      setIsPurchasing(false)
+      setIsProcessing(false)
     }
   }
 
@@ -529,13 +603,24 @@ export default function SolanaWalletApp() {
         mockRaffles[raffleIndex].winner = mockWinnerAddress
       }
 
-      setSelectedWinner({ raffle, winner: mockWinnerAddress })
+      setWinnerInfo({ raffle, winner: mockWinnerAddress })
       setShowWinnerModal(true)
     } catch (error) {
       console.error("[v0] Failed to close raffle:", error)
       alert("Error closing raffle. Please try again.")
     }
   }
+
+  const calculateTotalStakeFromRaffles = () => {
+    return mockRaffles.reduce((total, raffle) => {
+      const stakeFromRaffle = (raffle.totalRaised * raffle.stakePercent) / 100
+      return total + stakeFromRaffle
+    }, 0)
+  }
+
+  const totalStakeRetained = calculateTotalStakeFromRaffles()
+  const stakeTarget = 500 // DOT
+  const stakeProgress = (totalStakeRetained / stakeTarget) * 100
 
   const goToDashboard = () => {
     setShowLandingPage(false)
@@ -814,61 +899,65 @@ export default function SolanaWalletApp() {
 
             {/* Stake Section */}
             <section id="stake-garantia" className="py-16">
-              <div className="max-w-4xl mx-auto">
+              <div className="w-full">
                 <div className="text-center mb-12">
                   <h2 className="text-3xl font-bold text-foreground mb-4">Stake Guarantee</h2>
-                  <p className="text-lg text-muted-foreground">How the stake works in our raffle system.</p>
+                  <p className="text-lg text-muted-foreground">
+                    Participate in our transparent staking system and earn rewards.
+                  </p>
                 </div>
 
-                <div className="mt-12 max-w-4xl mx-auto">
-                  <Card className="bg-gradient-to-r from-green-50 to-emerald-50 border-green-200 animate-slide-up">
-                    <CardHeader>
-                      <CardTitle className="flex items-center space-x-2 text-green-800">
-                        <div className="w-6 h-6 bg-green-600 rounded-full flex items-center justify-center">
-                          <CheckCircle className="w-4 h-4 text-white" />
+                <div className="bg-gradient-to-r from-green-50 to-emerald-50 border-t border-b border-green-200 py-12 px-6 animate-slide-up">
+                  <div className="max-w-6xl mx-auto">
+                    <div className="text-center mb-8">
+                      <div className="flex items-center justify-center space-x-2 text-green-800 mb-4">
+                        <div className="w-8 h-8 bg-green-600 rounded-full flex items-center justify-center">
+                          <CheckCircle className="w-5 h-5 text-white" />
                         </div>
-                        <span>Stake Guarantee</span>
-                      </CardTitle>
-                      <CardDescription className="text-green-700">
+                        <h3 className="text-2xl font-bold">Stake Guarantee Pool</h3>
+                      </div>
+                      <p className="text-green-700 text-lg">
                         The stake functions as a transparency guarantee, replacing the role of the Lottery.
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div className="text-center">
-                          <div className="text-2xl font-bold text-green-800">0.91 DOT</div>
-                          <div className="text-sm text-green-600">Amount Retained</div>
-                        </div>
-                        <div className="text-center">
-                          <div className="text-2xl font-bold text-green-800">1.8%</div>
-                          <div className="text-sm text-green-600">Stake Progress</div>
-                        </div>
-                        <div className="text-center">
-                          <div className="text-2xl font-bold text-green-800">50 DOT</div>
-                          <div className="text-sm text-green-600">Target</div>
-                        </div>
+                      </p>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
+                      <div className="text-center bg-white/50 p-6 rounded-lg border border-green-200">
+                        <div className="text-3xl font-bold text-green-800">{totalStakeRetained.toFixed(2)} DOT</div>
+                        <div className="text-sm text-green-600 mt-2">Total Staked</div>
                       </div>
-                      <div className="space-y-2">
-                        <div className="flex justify-between text-sm">
-                          <span className="text-green-700">Stake Progress:</span>
-                          <span className="font-semibold text-green-800">0.91 / 50 DOT</span>
-                        </div>
-                        <div className="w-full bg-green-200 rounded-full h-3">
-                          <div
-                            className="bg-gradient-to-r from-green-500 to-emerald-600 h-3 rounded-full transition-all duration-500"
-                            style={{ width: "1.821%" }}
-                          ></div>
-                        </div>
+                      <div className="text-center bg-white/50 p-6 rounded-lg border border-green-200">
+                        <div className="text-3xl font-bold text-green-800">{stakeProgress.toFixed(1)}%</div>
+                        <div className="text-sm text-green-600 mt-2">Progress</div>
                       </div>
-                      <div className="bg-white/50 p-4 rounded-lg border border-green-200">
-                        <p className="text-sm text-green-700 leading-relaxed">
+                      <div className="text-center bg-white/50 p-6 rounded-lg border border-green-200">
+                        <div className="text-3xl font-bold text-green-800">{stakeTarget} DOT</div>
+                        <div className="text-sm text-green-600 mt-2">Target</div>
+                      </div>
+                    </div>
+
+                    <div className="max-w-4xl mx-auto space-y-6">
+                      <div className="flex justify-between text-lg">
+                        <span className="text-green-700 font-medium">Stake Progress:</span>
+                        <span className="font-bold text-green-800">
+                          {totalStakeRetained.toFixed(2)} / {stakeTarget} DOT
+                        </span>
+                      </div>
+                      <div className="w-full bg-green-200 rounded-full h-4">
+                        <div
+                          className="bg-gradient-to-r from-green-500 to-emerald-600 h-4 rounded-full transition-all duration-500"
+                          style={{ width: `${Math.min(stakeProgress, 100)}%` }}
+                        ></div>
+                      </div>
+                      <div className="bg-white/70 p-6 rounded-lg border border-green-200">
+                        <p className="text-green-700 leading-relaxed text-center">
                           <strong>How does it work?</strong> A percentage of each sale is retained as a stake guarantee.
                           This fund ensures process transparency and replaces the need for a central authority like the
                           National Lottery. Funds are automatically released at the end of each raffle.
                         </p>
                       </div>
-                    </CardContent>
-                  </Card>
+                    </div>
+                  </div>
                 </div>
               </div>
             </section>
@@ -996,6 +1085,94 @@ export default function SolanaWalletApp() {
               </div>
             </section>
           </main>
+        </div>
+      )}
+
+      {showPurchaseModal && selectedRaffle && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-900 rounded-2xl p-6 max-w-md w-full border border-gray-200 dark:border-gray-700">
+            <h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-white">Confirm Purchase</h3>
+
+            <div className="space-y-4 mb-6">
+              <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
+                <h4 className="font-semibold text-gray-900 dark:text-white">{selectedRaffle.title}</h4>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  Ticket #{selectedRaffle.ticketsIssued + 1} of {selectedRaffle.maxTickets}
+                </p>
+              </div>
+
+              <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+                <h5 className="font-medium mb-2 text-gray-900 dark:text-white">Payment Breakdown</h5>
+                <div className="space-y-1 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-gray-600 dark:text-gray-400">Ticket Price:</span>
+                    <span className="font-medium text-gray-900 dark:text-white">{selectedRaffle.ticketPrice} DOT</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600 dark:text-gray-400">
+                      Platform Fee ({selectedRaffle.feePercent}%):
+                    </span>
+                    <span className="text-gray-900 dark:text-white">
+                      {((selectedRaffle.ticketPrice * selectedRaffle.feePercent) / 100).toFixed(3)} DOT
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600 dark:text-gray-400">
+                      Stake Pool ({selectedRaffle.stakePercent}%):
+                    </span>
+                    <span className="text-green-600 dark:text-green-400">
+                      {((selectedRaffle.ticketPrice * selectedRaffle.stakePercent) / 100).toFixed(3)} DOT
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600 dark:text-gray-400">To Organizer:</span>
+                    <span className="text-gray-900 dark:text-white">
+                      {(
+                        selectedRaffle.ticketPrice -
+                        (selectedRaffle.ticketPrice * (selectedRaffle.feePercent + selectedRaffle.stakePercent)) / 100
+                      ).toFixed(3)}{" "}
+                      DOT
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {isProcessing && (
+                <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                  <div className="flex items-center space-x-3">
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
+                    <div>
+                      <p className="font-medium text-blue-900 dark:text-blue-100">
+                        {purchaseStep === "processing" ? "Processing Transaction..." : "Confirming..."}
+                      </p>
+                      <p className="text-sm text-blue-700 dark:text-blue-300">
+                        {purchaseStep === "processing"
+                          ? "Please wait while we process your payment"
+                          : "Please confirm in your wallet"}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="flex space-x-3">
+              <button
+                onClick={() => setShowPurchaseModal(false)}
+                disabled={isProcessing}
+                className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmPurchase}
+                disabled={isProcessing}
+                className="flex-1 px-4 py-2 bg-gradient-to-r from-blue-600 to-cyan-500 text-white rounded-lg hover:from-blue-700 hover:to-cyan-600 disabled:opacity-50 font-medium"
+              >
+                {isProcessing ? "Processing..." : `Buy for ${selectedRaffle.ticketPrice} DOT`}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
