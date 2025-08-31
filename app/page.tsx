@@ -5,8 +5,6 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import {
-  Wallet,
-  Copy,
   CheckCircle,
   Ticket,
   Trophy,
@@ -65,13 +63,26 @@ const playSuccessSound = () => {
   oscillator.stop(audioContext.currentTime + 0.5)
 }
 
-// Phantom wallet types
-interface PhantomProvider {
-  isPhantom: boolean
-  connect: () => Promise<{ publicKey: { toString: () => string } }>
+interface PolkadotExtension {
+  name: string
+  version: string
+  enable: (dappName: string) => Promise<{
+    accounts: {
+      get: () => Promise<Array<{ address: string; name?: string }>>
+    }
+    signer: any
+  }>
+}
+
+interface PolkadotWallet {
+  name: string
+  version: string
+  accounts: {
+    get: () => Promise<Array<{ address: string; name?: string }>>
+  }
+  signer: any
+  connect: () => Promise<void>
   disconnect: () => Promise<void>
-  on: (event: string, callback: (args: any) => void) => void
-  publicKey: { toString: () => string } | null
   isConnected: boolean
 }
 
@@ -167,7 +178,11 @@ const mockRaffles: Raffle[] = [
 
 declare global {
   interface Window {
-    solana?: PhantomProvider
+    injectedWeb3?: {
+      "polkadot-js"?: PolkadotExtension
+      talisman?: PolkadotExtension
+      "subwallet-js"?: PolkadotExtension
+    }
   }
 }
 
@@ -248,12 +263,12 @@ const stakePool: StakePool = {
   lockPeriod: 30,
 }
 
-export default function SolanaWalletApp() {
-  const [wallet, setWallet] = useState<PhantomProvider | null>(null)
+export default function PolkadotRaffleApp() {
   const [isConnected, setIsConnected] = useState(false)
-  const [publicKey, setPublicKey] = useState<string>("")
+  const [publicKey, setPublicKey] = useState("")
   const [isConnecting, setIsConnecting] = useState(false)
   const [copied, setCopied] = useState(false)
+  const [wallet, setWallet] = useState<PolkadotWallet | null>(null)
   const [showCreateRaffleModal, setShowCreateRaffleModal] = useState(false)
   const [showPurchaseModal, setShowPurchaseModal] = useState(false)
   const [selectedRaffle, setSelectedRaffle] = useState<Raffle | null>(null)
@@ -261,7 +276,6 @@ export default function SolanaWalletApp() {
   const [showWinnerModal, setShowWinnerModal] = useState(false)
   const [winnerInfo, setWinnerInfo] = useState<{ raffle: Raffle; winner: string } | null>(null)
   const [showTicketsModal, setShowTicketsModal] = useState(false)
-  const [showStakeRewardsModal, setShowStakeRewardsModal] = useState(false)
   const [userTickets, setUserTickets] = useState<NFTTicket[]>([])
   const [isAdmin, setIsAdmin] = useState(false)
   const [showAdminDashboard, setShowAdminDashboard] = useState(false)
@@ -278,8 +292,10 @@ export default function SolanaWalletApp() {
   const [raffleData, setRaffleData] = useState(generateRaffleData())
   const [currentTime, setCurrentTime] = useState(new Date())
   const [showLandingPage, setShowLandingPage] = useState(true)
+  const [availableWallets, setAvailableWallets] = useState<string[]>([])
   const router = useRouter()
   const [showSuccessModal, setShowSuccessModal] = useState(false)
+  const [demoMode, setDemoMode] = useState(false)
 
   useEffect(() => {
     const style = document.createElement("style")
@@ -342,65 +358,46 @@ export default function SolanaWalletApp() {
   }, [])
 
   useEffect(() => {
-    // Check if Phantom wallet is available
-    if (typeof window !== "undefined" && window.solana?.isPhantom) {
-      setWallet(window.solana)
+    console.log("[v0] Browser:", navigator.userAgent.includes("Chrome") ? "Chrome-based" : "Other")
+    console.log("[v0] Window injectedWeb3:", window.injectedWeb3)
+    console.log("[v0] Available extensions:", Object.keys(window.injectedWeb3 || {}))
 
-      // Check if already connected
-      if (window.solana.isConnected && window.solana.publicKey) {
-        setIsConnected(true)
-        setPublicKey(window.solana.publicKey.toString())
+    // Check for Polkadot extensions with delay to allow extension loading
+    setTimeout(() => {
+      if (typeof window !== "undefined") {
+        const polkadotExtension = (window as any).injectedWeb3?.["polkadot-js"]
+        const talismanExtension = (window as any).injectedWeb3?.["talisman"]
+        const subwalletExtension = (window as any).injectedWeb3?.["subwallet-js"]
+
+        console.log("[v0] Polkadot.js detected:", !!polkadotExtension)
+        console.log("[v0] Talisman detected:", !!talismanExtension)
+        console.log("[v0] SubWallet detected:", !!subwalletExtension)
+
+        if (window.injectedWeb3) {
+          const wallets = Object.keys(window.injectedWeb3)
+          setAvailableWallets(wallets)
+          console.log("[v0] Available wallets:", wallets)
+
+          // Try to connect to the first available wallet
+          if (wallets.length > 0) {
+            const firstWallet = window.injectedWeb3[wallets[0] as keyof typeof window.injectedWeb3]
+            if (firstWallet) {
+              setWallet(firstWallet)
+              console.log("[v0] Set wallet:", wallets[0])
+            }
+          }
+        } else {
+          console.log("[v0] No injectedWeb3 found - extensions may not be installed or enabled")
+          setDemoMode(true)
+        }
       }
-
-      // Listen for wallet events
-      window.solana.on("connect", (publicKey: any) => {
-        console.log("[v0] Wallet connected:", publicKey.toString())
-        setIsConnected(true)
-        setPublicKey(publicKey.toString())
-      })
-
-      window.solana.on("disconnect", () => {
-        console.log("[v0] Wallet disconnected")
-        setIsConnected(false)
-        setPublicKey("")
-      })
-    }
+    }, 1000) // Wait 1 second for extensions to load
 
     if (isConnected && publicKey) {
       // Mock admin check - replace with actual contract logic
-      setIsAdmin(publicKey.startsWith("8sj") || publicKey.startsWith("9kL"))
+      setIsAdmin(publicKey.startsWith("5") || publicKey.startsWith("1"))
     }
   }, [isConnected, publicKey])
-
-  const connectWallet = async () => {
-    if (!wallet) {
-      window.open("https://phantom.app/", "_blank")
-      return
-    }
-
-    try {
-      setIsConnecting(true)
-      const response = await wallet.connect()
-      setIsConnected(true)
-      setPublicKey(response.publicKey.toString())
-    } catch (error) {
-      console.error("[v0] Failed to connect wallet:", error)
-    } finally {
-      setIsConnecting(false)
-    }
-  }
-
-  const disconnectWallet = async () => {
-    if (wallet) {
-      try {
-        await wallet.disconnect()
-        setIsConnected(false)
-        setPublicKey("")
-      } catch (error) {
-        console.error("[v0] Failed to disconnect wallet:", error)
-      }
-    }
-  }
 
   const copyAddress = async () => {
     if (publicKey) {
@@ -412,7 +409,7 @@ export default function SolanaWalletApp() {
 
   const formatAddress = (address: string) => {
     if (!address) return ""
-    return `${address.slice(0, 4)}...${address.slice(-4)}`
+    return `${address.slice(0, 6)}...${address.slice(-4)}`
   }
 
   const buyTicket = async (raffle: Raffle) => {
@@ -447,80 +444,131 @@ export default function SolanaWalletApp() {
   }
 
   const confirmPurchase = async () => {
-    if (!selectedRaffle) return
+    if (!selectedRaffle || !isConnected) return
 
     setIsProcessing(true)
+    setPurchaseStep("processing")
 
     try {
-      setPurchaseStep("processing")
-      await new Promise((resolve) => setTimeout(resolve, 1000)) // Wallet signature
+      console.log("[v0] Starting ticket purchase process...")
 
-      // Simulate blockchain confirmation
-      await new Promise((resolve) => setTimeout(resolve, 1500)) // Network processing
+      // Step 1: Validate wallet balance (mock)
+      await new Promise((resolve) => setTimeout(resolve, 1000))
+      console.log("[v0] Wallet balance validated")
 
-      const ticketPrice = selectedRaffle.ticketPrice
-      const feeAmount = (ticketPrice * selectedRaffle.feePercent) / 100
-      const stakeAmount = (ticketPrice * selectedRaffle.stakePercent) / 100
-      const organizerAmount = ticketPrice - feeAmount - stakeAmount
+      // Step 2: Create transaction (mock)
+      await new Promise((resolve) => setTimeout(resolve, 1500))
+      console.log("[v0] Transaction created")
 
-      console.log("[v0] Payment distribution:", {
-        total: ticketPrice,
-        fee: feeAmount,
-        stake: stakeAmount,
-        organizer: organizerAmount,
-      })
+      // Step 3: Submit to Polkadot network (mock)
+      await new Promise((resolve) => setTimeout(resolve, 2000))
+      console.log("[v0] Transaction submitted to network")
 
-      const txHash = `${Math.random().toString(36).substring(2, 15)}${Math.random().toString(36).substring(2, 15)}`
-
+      // Step 4: Generate NFT ticket
+      const ticketId = `TICKET-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
       const newTicket: NFTTicket = {
-        id: `ticket-${Date.now()}`,
+        id: ticketId,
         raffleId: selectedRaffle.id,
         raffleTitle: selectedRaffle.title,
-        ticketNumber: (selectedRaffle.ticketsIssued + 1).toString().padStart(4, "0"),
-        purchaseDate: new Date().toLocaleDateString(),
-        qrCode: `${selectedRaffle.id}-${Date.now()}`,
-        transactionHash: txHash,
-        purchasePrice: ticketPrice,
+        ticketNumber: selectedRaffle.ticketsIssued + 1,
+        purchaseDate: new Date().toISOString(),
+        price: selectedRaffle.ticketPrice,
+        qrCode: `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${ticketId}`,
+        transactionHash: `0x${Math.random().toString(16).substr(2, 64)}`,
+        owner: publicKey,
       }
 
+      // Step 5: Update raffle data
       const updatedRaffles = mockRaffles.map((raffle) =>
         raffle.id === selectedRaffle.id
           ? {
               ...raffle,
               ticketsIssued: raffle.ticketsIssued + 1,
               totalRaised: raffle.totalRaised + raffle.ticketPrice,
-              // Add participant to the list
-              participants: [...raffle.participants, publicKey || "Unknown"],
+              participants: [...raffle.participants, publicKey],
             }
           : raffle,
       )
 
+      // Add ticket to user's collection
       setUserTickets((prev) => [...prev, newTicket])
 
-      setRaffleData((prev) => ({
-        ...prev,
-        totalStake: prev.totalStake + stakeAmount,
-        totalTicketsSold: prev.totalTicketsSold + 1,
-      }))
-
       setPurchaseStep("success")
-      playSuccessSound()
-      createConfetti()
 
-      console.log("[v0] Transaction successful:", txHash)
-
+      // Show success message with confetti
       setTimeout(() => {
-        setShowPurchaseModal(false)
-        setShowSuccessModal(true)
-        setPurchaseStep("confirm")
-      }, 1500)
+        // Trigger confetti effect
+        const canvas = document.createElement("canvas")
+        canvas.style.position = "fixed"
+        canvas.style.top = "0"
+        canvas.style.left = "0"
+        canvas.style.width = "100%"
+        canvas.style.height = "100%"
+        canvas.style.pointerEvents = "none"
+        canvas.style.zIndex = "9999"
+        document.body.appendChild(canvas)
+
+        // Simple confetti animation
+        const ctx = canvas.getContext("2d")
+        if (ctx) {
+          canvas.width = window.innerWidth
+          canvas.height = window.innerHeight
+
+          const colors = ["#0EA5E9", "#06B6D4", "#10B981", "#F59E0B"]
+          const particles: any[] = []
+
+          for (let i = 0; i < 100; i++) {
+            particles.push({
+              x: Math.random() * canvas.width,
+              y: -10,
+              vx: (Math.random() - 0.5) * 4,
+              vy: Math.random() * 3 + 2,
+              color: colors[Math.floor(Math.random() * colors.length)],
+              size: Math.random() * 6 + 2,
+            })
+          }
+
+          const animate = () => {
+            ctx.clearRect(0, 0, canvas.width, canvas.height)
+
+            particles.forEach((particle, index) => {
+              particle.x += particle.vx
+              particle.y += particle.vy
+              particle.vy += 0.1
+
+              ctx.fillStyle = particle.color
+              ctx.fillRect(particle.x, particle.y, particle.size, particle.size)
+
+              if (particle.y > canvas.height) {
+                particles.splice(index, 1)
+              }
+            })
+
+            if (particles.length > 0) {
+              requestAnimationFrame(animate)
+            } else {
+              document.body.removeChild(canvas)
+            }
+          }
+
+          animate()
+        }
+
+        // Play success sound (mock)
+        console.log("[v0] Playing success sound")
+      }, 500)
+
+      console.log("[v0] Ticket purchase completed successfully")
     } catch (error) {
-      console.error("Purchase failed:", error)
-      alert("Transaction failed. Please try again.")
-      setIsProcessing(false)
+      console.error("[v0] Purchase failed:", error)
+      alert("Purchase failed. Please try again.")
       setPurchaseStep("confirm")
     } finally {
       setIsProcessing(false)
+      setTimeout(() => {
+        setShowPurchaseModal(false)
+        setPurchaseStep("confirm")
+      }, 3000)
     }
   }
 
@@ -677,6 +725,49 @@ export default function SolanaWalletApp() {
     router.push("/rifas")
   }
 
+  const connectWallet = async () => {
+    if (isConnecting) return
+
+    setIsConnecting(true)
+    console.log("[v0] Attempting to connect wallet...")
+
+    try {
+      if (demoMode || !wallet) {
+        // Demo mode - simulate wallet connection
+        console.log("[v0] Using demo mode wallet connection")
+        const mockAddress = "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY"
+        setPublicKey(mockAddress)
+        setIsConnected(true)
+        alert("Demo wallet connected successfully!")
+        return
+      }
+
+      // Real wallet connection
+      console.log("[v0] Enabling wallet extension...")
+      const injected = await wallet.enable("RIFA AVEIT")
+
+      if (injected && injected.accounts) {
+        const accounts = await injected.accounts.get()
+        console.log("[v0] Retrieved accounts:", accounts)
+
+        if (accounts.length > 0) {
+          setPublicKey(accounts[0].address)
+          setIsConnected(true)
+          console.log("[v0] Wallet connected successfully:", accounts[0].address)
+        } else {
+          throw new Error("No accounts found")
+        }
+      } else {
+        throw new Error("Failed to get accounts from wallet")
+      }
+    } catch (error) {
+      console.error("[v0] Wallet connection failed:", error)
+      alert(`Failed to connect wallet: ${error instanceof Error ? error.message : "Unknown error"}`)
+    } finally {
+      setIsConnecting(false)
+    }
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
       {showLandingPage && (
@@ -726,6 +817,21 @@ export default function SolanaWalletApp() {
                   </button>
                 </nav>
                 <div className="flex items-center space-x-4">
+                  {!isConnected ? (
+                    <Button
+                      onClick={connectWallet}
+                      disabled={isConnecting}
+                      variant="outline"
+                      className="border-primary text-primary hover:bg-primary hover:text-white bg-transparent"
+                    >
+                      {isConnecting ? "Connecting..." : "Connect Wallet"}
+                    </Button>
+                  ) : (
+                    <div className="flex items-center space-x-2">
+                      <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                      <span className="text-sm font-medium">{formatAddress(publicKey)}</span>
+                    </div>
+                  )}
                   <Button
                     variant="default"
                     onClick={goToRafflesDashboard}
@@ -733,42 +839,6 @@ export default function SolanaWalletApp() {
                   >
                     📊 Analytics Dashboard
                   </Button>
-                  {!isConnected ? (
-                    <Button
-                      onClick={connectWallet}
-                      disabled={isConnecting}
-                      className="bg-gradient-to-r from-primary to-blue-600 hover:from-primary/90 hover:to-blue-600/90 text-white font-semibold px-6 py-2 rounded-lg shadow-md hover:shadow-lg transform hover:scale-105 transition-all duration-200"
-                    >
-                      {isConnecting ? (
-                        <>
-                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
-                          Connecting...
-                        </>
-                      ) : (
-                        <>
-                          <Wallet className="w-4 h-4 mr-2" />
-                          Connect Wallet
-                        </>
-                      )}
-                    </Button>
-                  ) : (
-                    <div className="flex items-center space-x-3">
-                      <div className="flex items-center space-x-2 bg-muted/50 px-3 py-2 rounded-lg">
-                        <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                        <span className="text-sm font-medium">{formatAddress(publicKey)}</span>
-                        <Button variant="ghost" size="sm" onClick={copyAddress} className="h-6 w-6 p-0 hover:bg-muted">
-                          {copied ? <CheckCircle className="w-3 h-3 text-green-600" /> : <Copy className="w-3 h-3" />}
-                        </Button>
-                      </div>
-                      <Button
-                        variant="outline"
-                        onClick={disconnectWallet}
-                        className="bg-transparent hover:bg-destructive/10 hover:text-destructive hover:border-destructive/20"
-                      >
-                        Disconnect
-                      </Button>
-                    </div>
-                  )}
                 </div>
               </div>
             </div>
@@ -1060,7 +1130,7 @@ export default function SolanaWalletApp() {
                           disabled={!isConnected || raffle.ticketsIssued >= raffle.maxTickets || !raffle.isActive}
                         >
                           {!isConnected
-                            ? "Connect Wallet"
+                            ? "Connect Wallet to Buy"
                             : !raffle.isActive
                               ? "Closed"
                               : raffle.ticketsIssued >= raffle.maxTickets
